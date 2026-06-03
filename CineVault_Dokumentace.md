@@ -124,7 +124,7 @@ Z těchto příběhů vyplývá nutnost vytvořit:
 ## 5. Návrh řešení
 
 ### Architektura systému
-Systém je navržen jako moderní jednostránková/vícestránková webová aplikace (SPA/MPA hybrid) na bázi frameworku **Next.js** využívajícího **App Router**. Pro ukládání dat slouží bezserverová databáze **Supabase** postavená na PostgreSQL. Communication layer zajišťuje asynchronní volání Supabase JS SDK.
+Systém je navržen jako moderní jednostránková/vícestránková webová aplikace (SPA/MPA hybrid) na bázi frameworku **Next.js** využívajícího **App Router**. Pro ukládání dat slouží bezserverová databáze **Supabase** postavená na PostgreSQL. Komunikační vrstva zajišťuje asynchronní volání Supabase JS SDK.
 
 ### Databázový model (ERD)
 Aplikace pracuje s relační tabulkou `movies`. Návrh schématu tabulky zohledňuje integritní omezení:
@@ -149,7 +149,7 @@ Následující schéma popisuje, jak se uživatel pohybuje v rozhraní CineVault
 
 ```mermaid
 graph TD
-    Start([Vstup na web /]) --> Browse[Úvodní obrazovka / Landpage]
+    Start([Vstup na web /]) --> Browse[Úvodní stránka]
     Browse --> |Klik na Prohlížet| List[Seznam filmů /movies]
     List --> |Vyhledávání / Filtrování| List
     List --> |Klik na tlačítko Přidat| NewPage[Formulář Nový film /movies/new]
@@ -172,23 +172,21 @@ graph TD
 Skutečně realizované řešení plně odpovídá navržené architektuře. Aplikace byla vyvinuta v čistém JavaScriptu za použití moderního Reactu v Next.js 15.
 
 ### Správa dat s využitím Supabase API
-Propojení s PostgreSQL databází bylo realizováno pomocí inicializačního souboru [supabase.js](file:///C:/Users/panov/.gemini/antigravity/scratch/movie-library-app/lib/supabase.js). SQL doptávání probíhá na straně klienta (Client-side rendering) asynchronně:
+Propojení s PostgreSQL databází bylo realizováno pomocí inicializačního souboru `lib/supabase.js`. SQL doptávání probíhá na straně klienta (Client-side rendering) asynchronně:
 - **Čtení dat:** Využívá metodu `supabase.from('movies').select('*')` seřazenou podle data vytvoření.
 - **Zápis dat:** Provádí se asynchronní metodou `.insert([formData])`.
 - **Aktualizace:** Vyhledá záznam podle ID a aktualizuje změněná pole pomocí `.update(formData).eq('id', id)`.
 - **Mazání:** Volá `.delete().eq('id', id)`.
 
 ### Klientská validace (React Hook Form & Zod)
-Formulář v komponentě [MovieForm.jsx](file:///C:/Users/panov/.gemini/antigravity/scratch/movie-library-app/components/MovieForm.jsx) využívá integraci `react-hook-form` a validátoru `Zod` pomocí resolveru. Validační schéma [schemas.js](file:///C:/Users/panov/.gemini/antigravity/scratch/movie-library-app/lib/schemas.js) vynucuje integritu dat:
+Formulář v komponentě `components/MovieForm.jsx` využívá integraci `react-hook-form` a validátoru `Zod` pomocí resolveru. Validační schéma `lib/schemas.js` vynucuje integritu dat.
+
+Příklad části validačního schématu (ilustrace principu bez zbytečného kopírování celého kódu):
 ```javascript
 export const movieSchema = z.object({
-  title: z.string().trim().min(2, { message: 'Název filmu musí mít alespoň 2 znaky' }),
-  director: z.string().trim().min(2, { message: 'Jméno režiséra musí mít alespoň 2 znaky' }),
+  title: z.string().trim().min(2).max(100),
   year: z.coerce.number().int().min(1888).max(new Date().getFullYear() + 5),
-  genre: z.string().trim().min(1, { message: 'Vyberte prosím žánr' }),
-  rating: z.coerce.number().min(0).max(10),
-  description: z.string().trim().optional().or(z.literal('')),
-  poster_url: z.string().trim().url({ message: 'Neplatný formát URL pro plakát' }).optional().or(z.literal(''))
+  // ... a další pole (režisér, žánr, hodnocení, popis, plakát)
 });
 ```
 Metoda `z.coerce.number()` zajišťuje, že hodnoty získané z textových inputů HTML formuláře jsou před validací správně přetypovány na čísla. Pokud uživatel zadá neplatná data, formulář zablokuje odeslání a pod konkrétním polem vykreslí chybové hlášení s ikonou varování.
