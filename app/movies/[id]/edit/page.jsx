@@ -13,44 +13,66 @@ export default function EditMoviePage({ params }) {
   const resolvedParams = use(params);
   const movieId = resolvedParams.id;
 
+  const [user, setUser] = useState(null);
   const [movie, setMovie] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState(null);
 
-  const fetchMovie = useCallback(async () => {
+  const checkAuthAndFetchMovie = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
 
-      const { data, error } = await supabase
+      // Check user session
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        router.push(`/auth?redirect=/movies/${movieId}/edit`);
+        return;
+      }
+      
+      const currentUser = session.user;
+      setUser(currentUser);
+
+      // Fetch movie data
+      const { data: movieData, error: movieError } = await supabase
         .from('movies')
         .select('*')
         .eq('id', movieId)
         .single();
 
-      if (error) {
-        throw error;
+      if (movieError) {
+        throw movieError;
       }
 
-      setMovie(data);
+      // Enforce ownership
+      if (movieData.user_id && movieData.user_id !== currentUser.id) {
+        setError('Nejste vlastníkem tohoto filmu. Upravovat jej může pouze uživatel, který jej vytvořil.');
+      } else {
+        setMovie(movieData);
+      }
     } catch (err) {
-      console.error('Chyba při načítání filmu k úpravě:', err);
-      setError('Nepodařilo se načíst údaje o filmu.');
+      console.error('Chyba při přípravě úpravy filmu:', err);
+      setError('Nepodařilo se načíst údaje o filmu nebo ověřit oprávnění.');
     } finally {
       setLoading(false);
     }
-  }, [movieId]);
+  }, [movieId, router]);
 
   useEffect(() => {
     if (movieId) {
       Promise.resolve().then(() => {
-        fetchMovie();
+        checkAuthAndFetchMovie();
       });
     }
-  }, [movieId, fetchMovie]);
+  }, [movieId, checkAuthAndFetchMovie]);
 
   const handleSubmit = async (formData) => {
+    if (!user || (movie && movie.user_id !== user.id)) {
+      alert('Nemáte oprávnění upravovat tento film.');
+      return;
+    }
+    
     try {
       setIsSubmitting(true);
       
@@ -94,8 +116,25 @@ export default function EditMoviePage({ params }) {
     return (
       <div className="container fade-in" style={{ padding: '4rem 1.5rem', textAlign: 'center' }}>
         <Film size={64} style={{ color: 'var(--text-muted)', marginBottom: '1.5rem', opacity: 0.4 }} />
-        <h1 style={{ fontSize: '2rem', fontWeight: 700 }}>Film nebyl nalezen</h1>
-        <p style={{ color: 'var(--text-secondary)' }}>{error || 'Záznam neexistuje.'}</p>
+        <h1 style={{ fontSize: '2rem', fontWeight: 700 }}>Přístup odepřen / Film nenalezen</h1>
+        <p style={{ color: 'var(--text-secondary)', marginTop: '0.5rem', marginBottom: '2rem' }}>
+          {error || 'Záznam neexistuje.'}
+        </p>
+        <Link href={`/movies/${movieId}`} style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '0.5rem',
+          padding: '0.6rem 1.2rem',
+          background: 'var(--bg-tertiary)',
+          border: '1px solid var(--glass-border)',
+          borderRadius: 'var(--border-radius-md)',
+          color: 'var(--text-primary)',
+          fontSize: '0.9rem',
+          fontWeight: 600,
+          cursor: 'pointer'
+        }}>
+          Zpět na detail filmu
+        </Link>
       </div>
     );
   }

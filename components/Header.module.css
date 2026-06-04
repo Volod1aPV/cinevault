@@ -99,3 +99,47 @@
     font-size: 0.8rem;
   }
 }
+
+.userContainer {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.userEmail {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.logoutBtn {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  background: transparent;
+  border: 1px solid var(--glass-border);
+  padding: 0.4rem 0.8rem;
+  border-radius: var(--border-radius-md);
+  cursor: pointer;
+  transition: var(--transition-smooth);
+}
+
+.logoutBtn:hover {
+  color: var(--color-danger);
+  border-color: rgba(244, 63, 94, 0.3);
+  background: rgba(244, 63, 94, 0.05);
+}
+
+@media (max-width: 640px) {
+  .userContainer {
+    gap: 0.5rem;
+  }
+  
+  .userEmail {
+    display: none;
+  }
+  
+  .logoutBtn {
+    padding: 0.3rem 0.6rem;
+    font-size: 0.8rem;
+  }
+}

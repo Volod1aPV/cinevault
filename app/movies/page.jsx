@@ -14,10 +14,12 @@ export default function MoviesPage() {
     !!(process.env.NEXT_PUBLIC_SUPABASE_URL &&
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 
+  const [user, setUser] = useState(null);
   const [movies, setMovies] = useState([]);
   const [loading, setLoading] = useState(isEnvConfigured);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedGenre, setSelectedGenre] = useState('');
+  const [activeTab, setActiveTab] = useState('all'); // 'all' | 'my'
   const [dbError, setDbError] = useState(null);
 
   const fetchMovies = useCallback(async () => {
@@ -49,6 +51,24 @@ export default function MoviesPage() {
         fetchMovies();
       });
     }
+
+    // Get current user and watch auth state
+    const getSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      setUser(session?.user ?? null);
+    };
+    getSession();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+      if (!session) {
+        setActiveTab('all');
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, [isEnvConfigured, fetchMovies]);
 
   const handleDelete = async (id) => {
@@ -68,7 +88,7 @@ export default function MoviesPage() {
     }
   };
 
-  // Filter movies by search term and genre
+  // Filter movies by search term, genre, and owner tab
   const filteredMovies = movies.filter((movie) => {
     const matchesSearch =
       movie.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -76,31 +96,38 @@ export default function MoviesPage() {
     
     const matchesGenre = selectedGenre === '' || movie.genre === selectedGenre;
 
-    return matchesSearch && matchesGenre;
+    const matchesTab = activeTab === 'all' || (user && movie.user_id === user.id);
+
+    return matchesSearch && matchesGenre && matchesTab;
   });
 
-  const sqlSchema = `-- Run this in your Supabase SQL Editor:
-create table public.movies (
+  const sqlSchema = `-- Run this in your Supabase SQL Editor to apply database changes:
+alter table public.movies add column if not exists user_id uuid references auth.users(id) on delete set null;
+
+create table if not exists public.reviews (
   id uuid default gen_random_uuid() primary key,
-  title text not null,
-  director text not null,
-  year integer not null,
-  genre text not null,
+  movie_id uuid references public.movies(id) on delete cascade not null,
+  user_id uuid references auth.users(id) on delete set null,
+  user_name text not null,
   rating numeric(3, 1) not null check (rating >= 0 and rating <= 10),
-  description text,
-  poster_url text,
+  comment text,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
 -- Enable RLS
 alter table public.movies enable row level security;
+alter table public.reviews enable row level security;
 
--- Policy (public access for development)
-create policy "Public access to movies"
-on public.movies
-for all
-using (true)
-with check (true);`;
+-- Setup RLS Policies for movies
+drop policy if exists "Public access to movies" on public.movies;
+create policy "Everyone can view movies" on public.movies for select using (true);
+create policy "Authenticated users can insert movies" on public.movies for insert with check (auth.role() = 'authenticated');
+create policy "Users can update their own movies" on public.movies for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
+create policy "Users can delete their own movies" on public.movies for delete using (auth.uid() = user_id);
+
+-- Setup RLS Policies for reviews
+create policy "Everyone can view reviews" on public.reviews for select using (true);
+create policy "Authenticated users can insert reviews" on public.reviews for insert with check (auth.role() = 'authenticated');`;
 
   if (!isEnvConfigured) {
     return (
@@ -131,7 +158,7 @@ with check (true);`;
           <h1>Moje knihovna filmů</h1>
           <p>Přehled všech uložených filmů ve vaší CineVault databázi.</p>
         </div>
-        <Link href="/movies/new" className={styles.addFirstBtn} id="btn-add-movie-top">
+        <Link href={user ? '/movies/new' : '/auth?redirect=/movies/new'} className={styles.addFirstBtn} id="btn-add-movie-top">
           <Plus size={18} />
           <span>Přidat nový film</span>
         </Link>
@@ -144,7 +171,7 @@ with check (true);`;
             <span>Problém s tabulkou v databázi</span>
           </h2>
           <p>
-            Připojení k Supabase proběhlo úspěšně, ale nepodařilo se načíst data. Je velmi pravděpodobné, že ve vaší databázi ještě neexistuje tabulka <code>movies</code>.
+            Připojení k Supabase proběhlo úspěšně, ale nepodařilo se načíst data. Je velmi pravděpodobné, že ve vaší databázi ještě neexistují tabulky s požadovanou strukturou.
           </p>
           <p><strong>Řešení:</strong> Přejděte do administrace Supabase, otevřete <strong>SQL Editor</strong>, vytvořte nový dotaz, vložte následující SQL kód a spusťte jej (tlačítkem Run):</p>
           <pre className={styles.sqlBox}>{sqlSchema}</pre>
@@ -188,6 +215,26 @@ with check (true);`;
             </div>
           </div>
 
+          {/* Tab switcher - only display if logged in */}
+          {user && (
+            <div className={styles.tabContainer} id="movies-tab-container">
+              <button
+                onClick={() => setActiveTab('all')}
+                className={`${styles.tabBtn} ${activeTab === 'all' ? styles.tabBtnActive : ''}`}
+                id="tab-all-movies"
+              >
+                Všechny filmy
+              </button>
+              <button
+                onClick={() => setActiveTab('my')}
+                className={`${styles.tabBtn} ${activeTab === 'my' ? styles.tabBtnActive : ''}`}
+                id="tab-my-movies"
+              >
+                Moje filmy
+              </button>
+            </div>
+          )}
+
           {loading ? (
             <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '300px' }}>
               <div style={{
@@ -203,7 +250,7 @@ with check (true);`;
           ) : filteredMovies.length > 0 ? (
             <div className={styles.grid}>
               {filteredMovies.map((movie) => (
-                <MovieCard key={movie.id} movie={movie} onDelete={handleDelete} />
+                <MovieCard key={movie.id} movie={movie} onDelete={handleDelete} currentUserId={user?.id} />
               ))}
             </div>
           ) : (
@@ -213,18 +260,21 @@ with check (true);`;
               <p>
                 {movies.length === 0
                   ? 'Vaše knihovna je zatím prázdná. Přidejte svůj první film kliknutím na tlačítko níže!'
+                  : activeTab === 'my'
+                  ? 'Nemáte uložené žádné vlastní filmy.'
                   : 'Žádný film neodpovídá vašemu vyhledávání nebo zvolenému žánru.'}
               </p>
-              {movies.length === 0 ? (
-                <Link href="/movies/new" className={styles.addFirstBtn} id="btn-add-first-movie">
+              {movies.length === 0 || (activeTab === 'my' && filteredMovies.length === 0) ? (
+                <Link href={user ? '/movies/new' : '/auth?redirect=/movies/new'} className={styles.addFirstBtn} id="btn-add-first-movie">
                   <Plus size={18} />
-                  <span>Přidat první film</span>
+                  <span>Přidat film</span>
                 </Link>
               ) : (
                 <button
                   onClick={() => {
                     setSearchTerm('');
                     setSelectedGenre('');
+                    setActiveTab('all');
                   }}
                   className={styles.addFirstBtn}
                   style={{ background: 'var(--bg-tertiary)' }}
