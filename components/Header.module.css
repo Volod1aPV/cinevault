@@ -3,8 +3,7 @@
   top: 0;
   z-index: 100;
   width: 100%;
-  background: rgba(10, 14, 23, 0.75);
-  backdrop-filter: blur(12px);
+  background: var(--bg-secondary);
   border-bottom: 1px solid var(--glass-border);
   transition: var(--transition-smooth);
 }
@@ -13,24 +12,21 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  height: 70px;
+  height: 60px;
 }
 
 .logo {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  font-size: 1.5rem;
+  font-size: 1.35rem;
   font-weight: 700;
-  background: var(--accent-gradient);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  color: var(--text-primary);
   letter-spacing: -0.5px;
 }
 
 .logoIcon {
   color: var(--accent-primary);
-  filter: drop-shadow(0 0 8px rgba(99, 102, 241, 0.5));
 }
 
 .navLinks {
@@ -40,7 +36,7 @@
 }
 
 .link {
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   font-weight: 500;
   color: var(--text-secondary);
   position: relative;
@@ -62,7 +58,7 @@
   left: 0;
   width: 100%;
   height: 2px;
-  background: var(--accent-gradient);
+  background: var(--accent-primary);
   border-radius: 2px;
 }
 
@@ -70,21 +66,19 @@
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.6rem 1.2rem;
+  padding: 0.5rem 1rem;
   border-radius: var(--border-radius-md);
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   font-weight: 600;
-  background: var(--accent-gradient);
+  background: var(--accent-primary);
   color: white;
   border: none;
   cursor: pointer;
-  box-shadow: 0 4px 14px 0 rgba(168, 85, 247, 0.3);
   transition: var(--transition-smooth);
 }
 
 .ctaBtn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px 0 rgba(168, 85, 247, 0.4);
+  background: #4f46e5; /* Slightly darker indigo */
 }
 
 .ctaBtn:active {
@@ -101,7 +95,7 @@
   }
   
   .ctaBtn {
-    padding: 0.5rem 0.8rem;
-    font-size: 0.85rem;
+    padding: 0.4rem 0.7rem;
+    font-size: 0.8rem;
   }
 }
