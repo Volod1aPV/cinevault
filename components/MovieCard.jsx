@@ -2,8 +2,8 @@ import Link from 'next/link';
 import { Star, Film, Trash2, Eye } from 'lucide-react';
 import styles from './MovieCard.module.css';
 
-export default function MovieCard({ movie, onDelete, currentUserId }) {
-  const { id, title, director, year, genre, rating, poster_url, user_id } = movie;
+export default function MovieCard({ movie, onDelete }) {
+  const { id, title, director, year, genre, rating, poster_url } = movie;
 
   const handleDelete = (e) => {
     e.preventDefault(); // Prevent navigating to detail page if wrapped in click handlers
@@ -11,8 +11,6 @@ export default function MovieCard({ movie, onDelete, currentUserId }) {
       onDelete(id);
     }
   };
-
-  const isOwner = currentUserId && user_id === currentUserId;
 
   return (
     <div className={`glass-panel ${styles.card}`}>
@@ -55,17 +53,14 @@ export default function MovieCard({ movie, onDelete, currentUserId }) {
             <span>Detail</span>
           </Link>
 
-          {isOwner && (
-            <button
-              onClick={handleDelete}
-              className={styles.deleteBtn}
-              title="Smazat film"
-              aria-label={`Smazat film ${title}`}
-              id={`btn-delete-${id}`}
-            >
-              <Trash2 size={16} />
-            </button>
-          )}
+          <button
+            onClick={handleDelete}
+            className={styles.deleteBtn}
+            title="Smazat film"
+            aria-label={`Smazat film ${title}`}
+          >
+            <Trash2 size={16} />
+          </button>
         </div>
       </div>
     </div>

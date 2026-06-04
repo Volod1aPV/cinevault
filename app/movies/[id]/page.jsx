@@ -4,7 +4,7 @@ import { useState, useEffect, use, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
-import { ArrowLeft, Edit2, Trash2, Star, Calendar, User, Film, Send, AlertCircle, MessageSquare } from 'lucide-react';
+import { ArrowLeft, Edit2, Trash2, Star, Calendar, User, Film, Send, AlertCircle } from 'lucide-react';
 import styles from '../movie-detail.module.css';
 
 export default function MovieDetailPage({ params }) {
@@ -14,13 +14,13 @@ export default function MovieDetailPage({ params }) {
   const resolvedParams = use(params);
   const movieId = resolvedParams.id;
 
-  const [user, setUser] = useState(null);
   const [movie, setMovie] = useState(null);
   const [reviews, setReviews] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   // Review form state
+  const [authorName, setAuthorName] = useState('');
   const [rating, setRating] = useState(10);
   const [comment, setComment] = useState('');
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
@@ -72,29 +72,9 @@ export default function MovieDetailPage({ params }) {
         fetchMovie();
       });
     }
-
-    // Get current user and watch auth state
-    const getSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      setUser(session?.user ?? null);
-    };
-    getSession();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-    });
-
-    return () => {
-      subscription.unsubscribe();
-    };
   }, [movieId, fetchMovie]);
 
   const handleDelete = async () => {
-    if (!user || movie?.user_id !== user.id) {
-      alert('Nemáte oprávnění smazat tento film.');
-      return;
-    }
-
     if (!confirm(`Opravdu chcete smazat film "${movie.title}"?`)) {
       return;
     }
@@ -116,8 +96,9 @@ export default function MovieDetailPage({ params }) {
 
   const handleReviewSubmit = async (e) => {
     e.preventDefault();
-    if (!user) {
-      alert('Pro přidání hodnocení musíte být přihlášeni.');
+
+    if (!authorName.trim()) {
+      setReviewError('Zadejte prosím své jméno.');
       return;
     }
 
@@ -132,8 +113,7 @@ export default function MovieDetailPage({ params }) {
 
       const reviewPayload = {
         movie_id: movieId,
-        user_id: user.id,
-        user_name: user.user_metadata?.display_name || user.email.split('@')[0],
+        user_name: authorName.trim(),
         rating: Number(rating),
         comment: comment.trim(),
       };
@@ -146,6 +126,7 @@ export default function MovieDetailPage({ params }) {
 
       // Reset form fields
       setComment('');
+      setAuthorName('');
       setRating(10);
       
       // Refresh local reviews list
@@ -188,8 +169,6 @@ export default function MovieDetailPage({ params }) {
       </div>
     );
   }
-
-  const isOwner = user && movie.user_id === user.id;
 
   return (
     <div className="container fade-in" style={{ paddingBottom: '4rem' }}>
@@ -251,18 +230,16 @@ export default function MovieDetailPage({ params }) {
             )}
           </div>
 
-          {isOwner && (
-            <div className={styles.actions}>
-              <Link href={`/movies/${movieId}/edit`} className={styles.editBtn} id="btn-edit">
-                <Edit2 size={16} />
-                <span>Upravit film</span>
-              </Link>
-              <button onClick={handleDelete} className={styles.deleteBtn} id="btn-delete">
-                <Trash2 size={16} />
-                <span>Smazat film</span>
-              </button>
-            </div>
-          )}
+          <div className={styles.actions}>
+            <Link href={`/movies/${movieId}/edit`} className={styles.editBtn} id="btn-edit">
+              <Edit2 size={16} />
+              <span>Upravit film</span>
+            </Link>
+            <button onClick={handleDelete} className={styles.deleteBtn} id="btn-delete">
+              <Trash2 size={16} />
+              <span>Smazat film</span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -300,71 +277,73 @@ export default function MovieDetailPage({ params }) {
           <div className={styles.reviewFormCard}>
             <h3>Přidat hodnocení</h3>
             
-            {user ? (
-              <form onSubmit={handleReviewSubmit} className={styles.reviewForm}>
-                {reviewError && (
-                  <div className={`${styles.loginPrompt}`} style={{ color: 'var(--color-danger)', borderColor: 'rgba(244, 63, 94, 0.2)', background: 'rgba(244, 63, 94, 0.02)' }}>
-                    <AlertCircle size={16} style={{ display: 'inline', marginRight: '0.25rem', verticalAlign: 'middle' }} />
-                    <span>{reviewError}</span>
-                  </div>
-                )}
-                
-                <div className="form-group" style={{ marginBottom: '1rem' }}>
-                  <label htmlFor="review-rating" className="form-label">
-                    Hodnocení (1 - 10 hvězd) *
-                  </label>
-                  <select
-                    id="review-rating"
-                    className="form-control"
-                    value={rating}
-                    onChange={(e) => setRating(Number(e.target.value))}
-                    required
-                  >
-                    {[10, 9, 8, 7, 6, 5, 4, 3, 2, 1].map((val) => (
-                      <option key={val} value={val}>
-                        {val} {val === 1 ? 'hvězda' : val >= 2 && val <= 4 ? 'hvězdy' : 'hvězd'}
-                      </option>
-                    ))}
-                  </select>
+            <form onSubmit={handleReviewSubmit} className={styles.reviewForm}>
+              {reviewError && (
+                <div className={`${styles.loginPrompt}`} style={{ color: 'var(--color-danger)', borderColor: 'rgba(244, 63, 94, 0.2)', background: 'rgba(244, 63, 94, 0.02)' }}>
+                  <AlertCircle size={16} style={{ display: 'inline', marginRight: '0.25rem', verticalAlign: 'middle' }} />
+                  <span>{reviewError}</span>
                 </div>
-
-                <div className="form-group" style={{ marginBottom: '1rem' }}>
-                  <label htmlFor="review-comment" className="form-label">
-                    Komentář (volitelné)
-                  </label>
-                  <textarea
-                    id="review-comment"
-                    className="form-control"
-                    style={{ minHeight: '100px', resize: 'vertical' }}
-                    placeholder="Podělte se o své dojmy z filmu..."
-                    value={comment}
-                    onChange={(e) => setComment(e.target.value)}
-                  />
-                </div>
-
-                <button
-                  type="submit"
-                  className={styles.editBtn}
-                  disabled={isSubmittingReview}
-                  style={{ width: '100%', justifyContent: 'center' }}
-                  id="btn-submit-review"
-                >
-                  <Send size={16} />
-                  <span>{isSubmittingReview ? 'Odesílání...' : 'Odeslat hodnocení'}</span>
-                </button>
-              </form>
-            ) : (
-              <div className={styles.loginPrompt}>
-                <MessageSquare size={24} style={{ display: 'block', margin: '0 auto 0.75rem auto', color: 'var(--text-muted)' }} />
-                <p>
-                  Pro přidání recenze se musíte nejprve{' '}
-                  <Link href={`/auth?redirect=/movies/${movieId}`} className={styles.loginLink}>
-                    přihlásit
-                  </Link>
-                  .
-                </p>
+              )}
+              
+              <div className="form-group" style={{ marginBottom: '1rem' }}>
+                <label htmlFor="review-author" className="form-label">
+                  Vaše jméno *
+                </label>
+                <input
+                  id="review-author"
+                  type="text"
+                  className="form-control"
+                  placeholder="Např. Jan Novák"
+                  value={authorName}
+                  onChange={(e) => setAuthorName(e.target.value)}
+                  required
+                />
               </div>
-            )}
+
+              <div className="form-group" style={{ marginBottom: '1rem' }}>
+                <label htmlFor="review-rating" className="form-label">
+                  Hodnocení (1 - 10 hvězd) *
+                </label>
+                <select
+                  id="review-rating"
+                  className="form-control"
+                  value={rating}
+                  onChange={(e) => setRating(Number(e.target.value))}
+                  required
+                >
+                  {[10, 9, 8, 7, 6, 5, 4, 3, 2, 1].map((val) => (
+                    <option key={val} value={val}>
+                      {val} {val === 1 ? 'hvězda' : val >= 2 && val <= 4 ? 'hvězdy' : 'hvězd'}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="form-group" style={{ marginBottom: '1rem' }}>
+                <label htmlFor="review-comment" className="form-label">
+                  Komentář (volitelné)
+                </label>
+                <textarea
+                  id="review-comment"
+                  className="form-control"
+                  style={{ minHeight: '100px', resize: 'vertical' }}
+                  placeholder="Podělte se o své dojmy z filmu..."
+                  value={comment}
+                  onChange={(e) => setComment(e.target.value)}
+                />
+              </div>
+
+              <button
+                type="submit"
+                className={styles.editBtn}
+                disabled={isSubmittingReview}
+                style={{ width: '100%', justifyContent: 'center' }}
+                id="btn-submit-review"
+              >
+                <Send size={16} />
+                <span>{isSubmittingReview ? 'Odesílání...' : 'Odeslat hodnocení'}</span>
+              </button>
+            </form>
           </div>
         </div>
       </div>

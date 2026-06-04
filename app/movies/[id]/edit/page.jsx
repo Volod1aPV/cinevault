@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import MovieForm from '@/components/MovieForm';
 import { Edit3, Film } from 'lucide-react';
+import Link from 'next/link';
 
 export default function EditMoviePage({ params }) {
   const router = useRouter();
@@ -13,29 +14,17 @@ export default function EditMoviePage({ params }) {
   const resolvedParams = use(params);
   const movieId = resolvedParams.id;
 
-  const [user, setUser] = useState(null);
   const [movie, setMovie] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState(null);
 
-  const checkAuthAndFetchMovie = useCallback(async () => {
+  const fetchMovie = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
 
-      // Check user session
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        router.push(`/auth?redirect=/movies/${movieId}/edit`);
-        return;
-      }
-      
-      const currentUser = session.user;
-      setUser(currentUser);
-
-      // Fetch movie data
-      const { data: movieData, error: movieError } = await supabase
+      const { data, error: movieError } = await supabase
         .from('movies')
         .select('*')
         .eq('id', movieId)
@@ -45,34 +34,24 @@ export default function EditMoviePage({ params }) {
         throw movieError;
       }
 
-      // Enforce ownership
-      if (movieData.user_id && movieData.user_id !== currentUser.id) {
-        setError('Nejste vlastníkem tohoto filmu. Upravovat jej může pouze uživatel, který jej vytvořil.');
-      } else {
-        setMovie(movieData);
-      }
+      setMovie(data);
     } catch (err) {
-      console.error('Chyba při přípravě úpravy filmu:', err);
-      setError('Nepodařilo se načíst údaje o filmu nebo ověřit oprávnění.');
+      console.error('Chyba při načítání filmu k úpravě:', err);
+      setError('Nepodařilo se načíst údaje o filmu.');
     } finally {
       setLoading(false);
     }
-  }, [movieId, router]);
+  }, [movieId]);
 
   useEffect(() => {
     if (movieId) {
       Promise.resolve().then(() => {
-        checkAuthAndFetchMovie();
+        fetchMovie();
       });
     }
-  }, [movieId, checkAuthAndFetchMovie]);
+  }, [movieId, fetchMovie]);
 
   const handleSubmit = async (formData) => {
-    if (!user || (movie && movie.user_id !== user.id)) {
-      alert('Nemáte oprávnění upravovat tento film.');
-      return;
-    }
-    
     try {
       setIsSubmitting(true);
       
@@ -116,11 +95,11 @@ export default function EditMoviePage({ params }) {
     return (
       <div className="container fade-in" style={{ padding: '4rem 1.5rem', textAlign: 'center' }}>
         <Film size={64} style={{ color: 'var(--text-muted)', marginBottom: '1.5rem', opacity: 0.4 }} />
-        <h1 style={{ fontSize: '2rem', fontWeight: 700 }}>Přístup odepřen / Film nenalezen</h1>
+        <h1 style={{ fontSize: '2rem', fontWeight: 700 }}>Film nenalezen</h1>
         <p style={{ color: 'var(--text-secondary)', marginTop: '0.5rem', marginBottom: '2rem' }}>
           {error || 'Záznam neexistuje.'}
         </p>
-        <Link href={`/movies/${movieId}`} style={{
+        <Link href="/movies" style={{
           display: 'inline-flex',
           alignItems: 'center',
           gap: '0.5rem',
@@ -133,7 +112,7 @@ export default function EditMoviePage({ params }) {
           fontWeight: 600,
           cursor: 'pointer'
         }}>
-          Zpět na detail filmu
+          Zpět na přehled
         </Link>
       </div>
     );
