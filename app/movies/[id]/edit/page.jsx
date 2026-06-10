@@ -127,6 +127,16 @@ export default function EditMoviePage({ params }) {
     rating: movie.rating || 5.0,
     description: movie.description || '',
     poster_url: movie.poster_url || '',
+    country: movie.country || '',
+    slogan: movie.slogan || '',
+    screenplay: movie.screenplay || '',
+    producer: movie.producer || '',
+    cinematography: movie.cinematography || '',
+    music: movie.music || '',
+    budget: movie.budget || '',
+    box_office: movie.box_office || '',
+    age_rating: movie.age_rating || '',
+    duration: movie.duration || '',
   };
 
   return (

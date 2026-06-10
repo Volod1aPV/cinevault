@@ -89,6 +89,16 @@ create table if not exists public.movies (
   rating numeric(3, 1) not null check (rating >= 0 and rating <= 10),
   description text,
   poster_url text,
+  country text,
+  slogan text,
+  screenplay text,
+  producer text,
+  cinematography text,
+  music text,
+  budget text,
+  box_office text,
+  age_rating text,
+  duration text,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 

@@ -199,6 +199,7 @@ export default function MovieDetailPage({ params }) {
         <div className={styles.details}>
           <div className={styles.header}>
             <h1 className={styles.title} id="movie-detail-title">{movie.title}</h1>
+            {movie.slogan && <p className={styles.sloganText}>„{movie.slogan}“</p>}
             <div className={styles.meta}>
               <span className={styles.rating}>
                 <Star size={16} fill="currentColor" />
@@ -228,6 +229,90 @@ export default function MovieDetailPage({ params }) {
                 K tomuto filmu zatím nebyl přidán žádný popis.
               </p>
             )}
+          </div>
+
+          {/* O filmu factsheet grid */}
+          <div className={styles.aboutSection}>
+            <h2>O filmu</h2>
+            <div className={styles.aboutGrid}>
+              <div className={styles.aboutRow}>
+                <span className={styles.aboutKey}>Rok výroby</span>
+                <span className={styles.aboutVal}>{movie.year}</span>
+              </div>
+              
+              {movie.country && (
+                <div className={styles.aboutRow}>
+                  <span className={styles.aboutKey}>Země původu</span>
+                  <span className={styles.aboutVal}>{movie.country}</span>
+                </div>
+              )}
+
+              <div className={styles.aboutRow}>
+                <span className={styles.aboutKey}>Žánr</span>
+                <span className={styles.aboutVal}>{movie.genre}</span>
+              </div>
+
+              <div className={styles.aboutRow}>
+                <span className={styles.aboutKey}>Režie</span>
+                <span className={styles.aboutVal}>{movie.director}</span>
+              </div>
+
+              {movie.screenplay && (
+                <div className={styles.aboutRow}>
+                  <span className={styles.aboutKey}>Scénář</span>
+                  <span className={styles.aboutVal}>{movie.screenplay}</span>
+                </div>
+              )}
+
+              {movie.producer && (
+                <div className={styles.aboutRow}>
+                  <span className={styles.aboutKey}>Produkce</span>
+                  <span className={styles.aboutVal}>{movie.producer}</span>
+                </div>
+              )}
+
+              {movie.cinematography && (
+                <div className={styles.aboutRow}>
+                  <span className={styles.aboutKey}>Kamera</span>
+                  <span className={styles.aboutVal}>{movie.cinematography}</span>
+                </div>
+              )}
+
+              {movie.music && (
+                <div className={styles.aboutRow}>
+                  <span className={styles.aboutKey}>Hudba</span>
+                  <span className={styles.aboutVal}>{movie.music}</span>
+                </div>
+              )}
+
+              {movie.budget && (
+                <div className={styles.aboutRow}>
+                  <span className={styles.aboutKey}>Rozpočet</span>
+                  <span className={styles.aboutVal}>{movie.budget}</span>
+                </div>
+              )}
+
+              {movie.box_office && (
+                <div className={styles.aboutRow}>
+                  <span className={styles.aboutKey}>Tržby celosvětově</span>
+                  <span className={styles.aboutVal}>{movie.box_office}</span>
+                </div>
+              )}
+
+              {movie.age_rating && (
+                <div className={styles.aboutRow}>
+                  <span className={styles.aboutKey}>Přístupnost</span>
+                  <span className={styles.aboutVal}>{movie.age_rating}</span>
+                </div>
+              )}
+
+              {movie.duration && (
+                <div className={styles.aboutRow}>
+                  <span className={styles.aboutKey}>Délka filmu</span>
+                  <span className={styles.aboutVal}>{movie.duration}</span>
+                </div>
+              )}
+            </div>
           </div>
 
           <div className={styles.actions}>
