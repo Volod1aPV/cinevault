@@ -44,18 +44,41 @@ create table public.movies (
   rating numeric(3, 1) not null check (rating >= 0 and rating <= 10),
   description text,
   poster_url text,
+  country text,
+  slogan text,
+  screenplay text,
+  producer text,
+  cinematography text,
+  music text,
+  budget text,
+  box_office text,
+  age_rating text,
+  duration text,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+-- Vytvoření tabulky pro recenze
+create table public.reviews (
+  id uuid default gen_random_uuid() primary key,
+  movie_id uuid references public.movies(id) on delete cascade not null,
+  user_name text not null,
+  rating numeric(3, 1) not null check (rating >= 0 and rating <= 10),
+  comment text,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
 -- Povolení Row Level Security (RLS)
 alter table public.movies enable row level security;
+alter table public.reviews enable row level security;
 
--- Vytvoření bezpečnostní politiky pro veřejný přístup (čtení i zápis pro vývoj)
-create policy "Public access to movies"
-on public.movies
-for all
-using (true)
-with check (true);
+-- Vytvoření bezpečnostních politik pro veřejný přístup (anonymní CRUD)
+create policy "Umožnit všem číst filmy" on public.movies for select using (true);
+create policy "Umožnit všem vkládat filmy" on public.movies for insert with check (true);
+create policy "Umožnit všem upravovat filmy" on public.movies for update using (true);
+create policy "Umožnit všem mazat filmy" on public.movies for delete using (true);
+
+create policy "Umožnit všem číst recenze" on public.reviews for select using (true);
+create policy "Umožnit všem vkládat recenze" on public.reviews for insert with check (true);
 
 -- Vložení úvodních filmů (seed data)
 insert into public.movies (title, director, year, genre, rating, description, poster_url)
@@ -113,13 +136,15 @@ movie-library-app/
 ---
 
 ## 📝 Validace formulářů
-Validace je implementována v komponentě `MovieForm.jsx` pomocí knihovny **Zod** (validační pravidla naleznete v `lib/schemas.js`) v propojení s **React Hook Form**:
+Validace je implementována v komponentě `MovieForm.jsx` pomocí knihovny **Zod** (validační schémata naleznete v `lib/schemas.js`) v propojení s **React Hook Form**:
 - **Název filmu:** Povinné pole, délka 2 - 100 znaků.
 - **Režisér:** Povinné pole, délka 2 - 100 znaků.
 - **Rok vydání:** Číselné pole, celé číslo od roku 1888 po rok `aktuální_rok + 5`.
 - **Žánr:** Povinná volba ze selektoru.
 - **Hodnocení:** Číselné pole, rozsah 0.0 až 10.0.
-- **URL plakátu:** Volitelné pole, pokud je však vyplněno, musí splňovat formát platné internetové URL adresy.
+- **URL plakátu:** Volitelné pole, musí však splňovat formát platné internetové URL adresy.
+- **Doplňující metadata (Nepovinná):** Země původu (max 100), Slogan (max 200), Scénář (max 200), Produkce (max 200), Kamera (max 100), Hudba (max 100), Rozpočet (max 50), Tržby (max 50), Přístupnost (max 20) a Délka filmu (max 30).
+- **Recenze (Přidat hodnocení):** Jméno hodnotitele (povinné, min. 2 znaky), hodnocení (povinné, 1–10 hvězd), komentář (volitelný, max. 500 znaků).
 
 ---
 
